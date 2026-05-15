@@ -1,5 +1,5 @@
-let pending = JSON.parse(localStorage.getItem("pending")) || [];
-let done = JSON.parse(localStorage.getItem("done")) || [];
+let pending = [];
+let done = [];
 
 function getDatePrefix() {
   const d = new Date();
@@ -8,89 +8,94 @@ function getDatePrefix() {
     String(d.getDate()).padStart(2,'0');
 }
 
-function getNextId() {
+async function getNextId() {
+  const snapshot = await db.collection("tasks").get();
   const prefix = getDatePrefix();
-  const todayItems = pending.concat(done).filter(i => i.id.startsWith(prefix));
+
+  const todayItems = snapshot.docs.filter(doc =>
+    doc.data().id.startsWith(prefix)
+  );
+
   return `${prefix}-${String(todayItems.length + 1).padStart(3,'0')}`;
 }
 
-function saveData() {
-  localStorage.setItem("pending", JSON.stringify(pending));
-  localStorage.setItem("done", JSON.stringify(done));
-}
-
-function addTask() {
+async function addTask() {
   const input = document.getElementById("taskInput");
   const text = input.value.trim();
 
   if (!text) return;
 
+  const id = await getNextId();
+
   const task = {
-    id: getNextId(),
+    id,
     text,
     time: new Date().toLocaleTimeString(),
-    date: new Date().toLocaleDateString()
+    date: new Date().toLocaleDateString(),
+    status: "pending"
   };
 
-  pending.unshift(task);
-  saveData();
+  await db.collection("tasks").add(task);
+
   input.value = "";
-  render();
 }
 
-function markDone(id) {
-  const index = pending.findIndex(t => t.id === id);
-  if (index === -1) return;
-
-  done.unshift(pending[index]);
-  pending.splice(index, 1);
-  saveData();
-  render();
+async function markDone(docId) {
+  await db.collection("tasks").doc(docId).update({
+    status: "done"
+  });
 }
 
-function render() {
+function render(snapshot) {
   const pendingList = document.getElementById("pendingList");
   const doneList = document.getElementById("doneList");
 
   pendingList.innerHTML = "";
   doneList.innerHTML = "";
 
-  pending.forEach(task => {
-    pendingList.innerHTML += createCard(task, true);
-  });
+  snapshot.forEach(doc => {
+    const task = doc.data();
 
-  done.forEach(task => {
-    doneList.innerHTML += createCard(task, false);
-  });
-}
-
-function createCard(task, isPending) {
-  return `
-    <div class="card">
-      <strong>${task.id}</strong><br/>
-      ${task.text}
-      <div class="meta">${task.date} - ${task.time}</div>
-
-      <div class="actions">
-        ${isPending ? `<button onclick="markDone('${task.id}')">Transferido</button>` : ""}
+    const card = `
+      <div class="card">
+        <strong>${task.id}</strong><br/>
+        ${task.text}
+        <div class="meta">${task.date} - ${task.time}</div>
+        ${
+          task.status === "pending"
+            ? `<div class="actions">
+                <button onclick="markDone('${doc.id}')">Transferido</button>
+               </div>`
+            : ""
+        }
       </div>
-    </div>
-  `;
+    `;
+
+    if (task.status === "pending") {
+      pendingList.innerHTML += card;
+    } else {
+      doneList.innerHTML += card;
+    }
+  });
 }
+
+db.collection("tasks")
+  .orderBy("id", "desc")
+  .onSnapshot(render);
 
 function showTab(tab) {
   document.getElementById("pendingList").classList.add("hidden");
   document.getElementById("doneList").classList.add("hidden");
 
-  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".tab").forEach(t =>
+    t.classList.remove("active")
+  );
 
   if (tab === "pending") {
-    document.getElementById("pendingList").classList.remove("hidden");
+    pendingList.classList.remove("hidden");
     document.querySelectorAll(".tab")[0].classList.add("active");
   } else {
-    document.getElementById("doneList").classList.remove("hidden");
+    doneList.classList.remove("hidden");
     document.querySelectorAll(".tab")[1].classList.add("active");
   }
 }
-
-render();
