@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+
+  <link rel="manifest" href="manifest.json">
+
+<meta name="theme-color" content="#1f6fff">
+
+<link rel="apple-touch-icon" href="icon-192.png">
+
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TechLog</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="container">
+
+    <h1>TECHLOG</h1>
+
+    <div class="input-area">
+      <input type="text" id="taskInput" placeholder="Digite a ocorrência aqui..." />
+      <button onclick="addTask()">SALVAR</button>
+    </div>
+
+    <div class="tabs">
+      <button class="tab active" onclick="showTab('pending')">Pendentes</button>
+      <button class="tab" onclick="showTab('done')">Transferidos</button>
+    </div>
+
+    <div id="pendingList" class="list"></div>
+    <div id="doneList" class="list hidden"></div>
+
+  </div>
+
+  <script src="app.js"></script>
+
+<script>
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("service-worker.js");
+  }
+</script>
+
+</body>
+</html>
