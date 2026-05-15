@@ -1,4 +1,4 @@
-const CACHE_NAME = "techlog-cache-v1";
+const CACHE_NAME = "techlog-cache-v2";
 
 const FILES = [
   "./",
